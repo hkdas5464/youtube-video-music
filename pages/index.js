@@ -343,7 +343,7 @@ export default function App() {
                       </Button>
                     </div>
                     <div className="slider-section">
-                      <Slider
+                      {/* <Slider
                         aria-label="Music progress"
                         classNames={{
                           track: "bg-default-500/30",
@@ -353,9 +353,10 @@ export default function App() {
                         value={currentTime}
                         min={0}
                         max={duration}
+                        width="100%"
                         onChange={handleSliderChange}
                         size="sm"
-                      />
+                      /> */}
                       <div className="time-display">
                         <p>{formatTime(currentTime)}</p>
                         <p>{formatTime(duration)}</p>
