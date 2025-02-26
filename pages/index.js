@@ -182,31 +182,40 @@ export default function App() {
   const handleLoad = async () => {
     const id = extractVideoId(youtubeUrl);
     if (id) {
-      // Check for duplicate in current playlist
       if (playlist.some((track) => track.videoId === id)) {
         alert("Music already exists in the playlist!");
         return;
       }
-      const newTrack = { videoId: id, url: youtubeUrl };
-      const res = await fetch("/api/playlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newTrack),
-      });
-      if (res.status === 409) {
-        alert("Music already exists in the playlist!");
-      } else if (res.ok) {
-        const json = await res.json();
-        setPlaylist((prev) => [...prev, json.data]);
-        if (currentIndex === null) setCurrentIndex(0);
-        setYoutubeUrl("");
+      // Fetch video metadata using YouTube oEmbed endpoint
+      try {
+        const resOembed = await fetch(
+          `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`
+        );
+        const data = await resOembed.json();
+        const newTrack = { videoId: id, url: youtubeUrl, title: data.title };
+        const res = await fetch("/api/playlist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newTrack),
+        });
+        if (res.status === 409) {
+          alert("Music already exists in the playlist!");
+        } else if (res.ok) {
+          const json = await res.json();
+          setPlaylist((prev) => [...prev, json.data]);
+          if (currentIndex === null) setCurrentIndex(0);
+          setYoutubeUrl("");
+        }
+      } catch (error) {
+        console.error("Failed to fetch video metadata", error);
+        alert("Failed to fetch video metadata. Please try again.");
       }
     } else {
       alert("Please enter a valid YouTube URL");
     }
   };
 
-  // Next/Previous track functions
+  // Next/Previous functions
   const handleNext = () => {
     if (currentIndex !== null && currentIndex < playlist.length - 1) {
       setCurrentIndex(currentIndex + 1);
@@ -317,9 +326,8 @@ export default function App() {
                   <div className="player-details">
                     <div className="header">
                       <div className="info">
-                        <h3>Daily Mix</h3>
-                        <p>12 Tracks</p>
-                        <h1>Frontend Radio</h1>
+                        <h3>{currentTrack ? currentTrack.title : "Daily Mix"}</h3>
+                        <p>{playlist.length} Tracks</p>
                       </div>
                       <Button
                         isIconOnly
@@ -358,16 +366,14 @@ export default function App() {
                         <PreviousIcon className="icon" />
                       </Button>
                       <Button isIconOnly radius="full" variant="light" onPress={togglePlayPause}>
-                        {isPlaying ? (
-                          <PauseCircleIcon size={54} />
-                        ) : (
-                          <PlayCircleIcon size={54} />
-                        )}
+                        {isPlaying ? <PauseCircleIcon size={54} /> : <PlayCircleIcon size={54} />}
                       </Button>
                       <Button isIconOnly radius="full" variant="light" onPress={handleNext}>
                         <NextIcon className="icon" />
                       </Button>
-                      
+                      <Button isIconOnly radius="full" variant="light">
+                        <ShuffleIcon className="icon" />
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -401,7 +407,7 @@ export default function App() {
                           height={45}
                           shadow="sm"
                         />
-                        <span>Track {index + 1}</span>
+                        <span>{track.title || `Track ${index + 1}`}</span>
                       </li>
                     ))}
                   </ul>
@@ -496,11 +502,6 @@ export default function App() {
           margin: 0;
           color: #4b5563;
           font-size: 0.875rem;
-        }
-        .info h1 {
-          margin-top: 8px;
-          font-size: 1.5rem;
-          color: #111827;
         }
         .like-btn {
           transform: translate(8px, -8px);
