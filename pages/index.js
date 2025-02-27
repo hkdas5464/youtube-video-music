@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import Head from "next/head";
 import YouTube from "react-youtube";
-import { Card, CardBody, Image, Button, Slider } from "@heroui/react";
-import {Input} from "@heroui/input";
+import { Card, CardBody, Image, Button, Slider, ScrollShadow, Navbar } from "@heroui/react";
+import { Input } from "@heroui/input";
+import {Avatar} from "@heroui/react";
+
 
 // ICONS
 export const HeartIcon = ({ size = 24, strokeWidth = 1.5, fill = "none", ...props }) => (
@@ -296,24 +298,26 @@ export default function App() {
         <title>YouTube Audio Player with Playlist</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
-      <div className="app-container">
-        {/* Input Section */}
-        <div className="input-section">
+      <Navbar>
           <Input
             placeholder="Paste YouTube URL here"
             value={youtubeUrl}
             onChange={(e) => setYoutubeUrl(e.target.value)}
           />
           <Button onPress={handleLoad}>Load</Button>
-        </div>
+      </Navbar>
+      <div className="app-container">
+        {/* Input Section */}
+       
 
         <div className="main-content">
           {/* Player Section */}
-          <div className="player-container">
+          <div className=" player-container">
             <Card className="player-card" isBlurred shadow="sm">
               <CardBody>
                 <div className="grid-container">
                   <div className="album-cover">
+                    
                     <Image
                       alt="Video Thumbnail"
                       className="object-cover"
@@ -357,6 +361,28 @@ export default function App() {
                         onChange={handleSliderChange}
                         size="sm"
                       /> */}
+                      <Slider
+                      value={currentTime/duration*100}
+                      min={0}
+                      max={100}
+                      onChange={(value) => handleSliderChange(value/100*duration)}
+                        classNames={{
+                          base: "max-w-md gap-3",
+                          track: "border-s-secondary-100",
+                          filler: "bg-gradient-to-r from-secondary-100 to-secondary-500",
+                        }}
+                        defaultValue={0}
+                        label="Select brightness"
+                        renderThumb={(props) => (
+                          <div
+                            {...props}
+                            className="group p-1 top-1/2 bg-background border-small border-default-200 dark:border-default-400/50 shadow-medium rounded-full cursor-grab data-[dragging=true]:cursor-grabbing"
+                          >
+                            <span className="transition-transform bg-gradient-to-br shadow-small from-secondary-100 to-secondary-500 rounded-full w-5 h-5 block group-data-[dragging=true]:scale-80" />
+                          </div>
+                        )}
+                        size="sm"
+                      />
                       <div className="time-display">
                         <p>{formatTime(currentTime)}</p>
                         <p>{formatTime(duration)}</p>
@@ -372,9 +398,7 @@ export default function App() {
                       <Button isIconOnly radius="full" variant="light" onPress={handleNext}>
                         <NextIcon className="icon" />
                       </Button>
-                      <Button isIconOnly radius="full" variant="light">
-                        <ShuffleIcon className="icon" />
-                      </Button>
+                     
                     </div>
                   </div>
                 </div>
@@ -383,7 +407,7 @@ export default function App() {
           </div>
 
           {/* Playlist Section */}
-          <div className="playlist-container">
+        <div className="overflow-y-auto playlist-container">
             <Card isBlurred shadow="sm">
               <CardBody>
                 <h3>Playlist</h3>
@@ -408,6 +432,9 @@ export default function App() {
                           height={45}
                           shadow="sm"
                         />
+                              {/* <Avatar size="md" 
+                          src={`https://img.youtube.com/vi/${track.videoId}/hqdefault.jpg`} /> */}
+
                         <span>{track.title || `Track ${index + 1}`}</span>
                       </li>
                     ))}
@@ -415,6 +442,7 @@ export default function App() {
                 )}
               </CardBody>
             </Card>
+            
           </div>
         </div>
 
