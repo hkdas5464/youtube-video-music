@@ -372,7 +372,6 @@ export default function App() {
                           filler: "bg-gradient-to-r from-secondary-100 to-secondary-500",
                         }}
                         defaultValue={0}
-                        label="Select brightness"
                         renderThumb={(props) => (
                           <div
                             {...props}
