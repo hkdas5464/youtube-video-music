@@ -1,4 +1,4 @@
-// pages/api/playlist.js
+// pages/api/playlist/[videoId].js
 import { MongoClient } from "mongodb";
 
 const uri = process.env.MONGODB_URI;
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
       const result = await collection.insertOne(track);
       res.status(201).json({ success: true, data: { ...track, _id: result.insertedId } });
     } else if (req.method === "DELETE") {
-      const videoId = req.query.videoId || req.params?.videoId; // Fallback for Next.js 13+
+      const { videoId } = req.query;
       if (!videoId) {
         res.status(400).json({ success: false, error: "Video ID is required" });
         return;
