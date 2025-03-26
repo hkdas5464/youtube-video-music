@@ -1,3 +1,4 @@
+// public/service-worker.js
 self.addEventListener('install', (event) => {
     console.log('Service Worker: Installed');
     self.skipWaiting();
@@ -9,6 +10,5 @@ self.addEventListener('install', (event) => {
   });
   
   self.addEventListener('fetch', (event) => {
-    // Cache strategy can be added here if needed
     event.respondWith(fetch(event.request));
   });

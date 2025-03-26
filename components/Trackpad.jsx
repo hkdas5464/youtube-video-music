@@ -15,9 +15,11 @@ import VolumeDownRounded from '@mui/icons-material/VolumeDownRounded';
 import FavoriteBorderRounded from '@mui/icons-material/FavoriteBorderRounded';
 import FavoriteRounded from '@mui/icons-material/FavoriteRounded';
 import DeleteRounded from '@mui/icons-material/DeleteRounded';
+import SearchRounded from '@mui/icons-material/SearchRounded';
 import YouTube from 'react-youtube';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
+import Collapse from '@mui/material/Collapse';
 
 const WallPaper = styled('div')({
   position: 'absolute',
@@ -67,7 +69,7 @@ const Widget = styled('div')(({ theme }) => ({
 const PlaylistContainer = styled('div')(({ theme }) => ({
   maxHeight: 300,
   overflowY: 'auto',
-  marginTop: 24,
+  marginTop: 16,
   padding: 8,
   borderRadius: 12,
   backgroundColor: 'rgba(255,255,255,0.1)',
@@ -122,9 +124,16 @@ const TinyText = styled(Typography)({
   letterSpacing: 0.2,
 });
 
+const SearchContainer = styled('div')({
+  display: 'flex',
+  alignItems: 'center',
+  marginBottom: 8,
+});
+
 export default function Trackpad() {
   const [youtubeUrl, setYoutubeUrl] = React.useState('');
-  const [playlist, setPlaylist] = React.useState([]);
+  const [originalPlaylist, setOriginalPlaylist] = React.useState([]);
+  const [displayedPlaylist, setDisplayedPlaylist] = React.useState([]);
   const [currentIndex, setCurrentIndex] = React.useState(null);
   const [player, setPlayer] = React.useState(null);
   const [currentTime, setCurrentTime] = React.useState(0);
@@ -132,6 +141,8 @@ export default function Trackpad() {
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [liked, setLiked] = React.useState(false);
   const [volume, setVolume] = React.useState(50);
+  const [searchOpen, setSearchOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   // Function to shuffle array (Fisher-Yates algorithm)
   const shuffleArray = (array) => {
@@ -148,9 +159,9 @@ export default function Trackpad() {
       const res = await fetch("/api/playlist");
       const json = await res.json();
       if (json.success) {
-        // Shuffle the playlist on initial load
         const shuffledPlaylist = shuffleArray(json.data);
-        setPlaylist(shuffledPlaylist);
+        setOriginalPlaylist(shuffledPlaylist);
+        setDisplayedPlaylist(shuffledPlaylist);
         if (shuffledPlaylist.length > 0 && currentIndex === null) {
           setCurrentIndex(0);
         }
@@ -161,7 +172,7 @@ export default function Trackpad() {
 
   // Media Session API Integration
   React.useEffect(() => {
-    const currentTrack = currentIndex !== null && playlist[currentIndex] ? playlist[currentIndex] : null;
+    const currentTrack = currentIndex !== null && displayedPlaylist[currentIndex] ? displayedPlaylist[currentIndex] : null;
     if ('mediaSession' in navigator && currentTrack) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: currentTrack.title,
@@ -193,7 +204,19 @@ export default function Trackpad() {
       navigator.mediaSession.setActionHandler('nexttrack', handleNext);
       navigator.mediaSession.setActionHandler('previoustrack', handlePrevious);
     }
-  }, [currentIndex, playlist, player]);
+  }, [currentIndex, displayedPlaylist, player]);
+
+  // Handle search filtering
+  React.useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setDisplayedPlaylist(originalPlaylist);
+    } else {
+      const filtered = originalPlaylist.filter((track) =>
+        track.title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setDisplayedPlaylist(filtered);
+    }
+  }, [searchQuery, originalPlaylist]);
 
   const extractVideoId = (url) => {
     try {
@@ -211,7 +234,7 @@ export default function Trackpad() {
   const handleLoad = async () => {
     const id = extractVideoId(youtubeUrl);
     if (id) {
-      if (playlist.some((track) => track.videoId === id)) {
+      if (originalPlaylist.some((track) => track.videoId === id)) {
         alert("Music already exists in the playlist!");
         return;
       }
@@ -230,7 +253,10 @@ export default function Trackpad() {
           alert("Music already exists in the playlist!");
         } else if (res.ok) {
           const json = await res.json();
-          setPlaylist((prev) => [...prev, json.data]);
+          setOriginalPlaylist((prev) => [...prev, json.data]);
+          if (searchQuery.trim() === '' || json.data.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+            setDisplayedPlaylist((prev) => [...prev, json.data]);
+          }
           if (currentIndex === null) setCurrentIndex(0);
           setYoutubeUrl("");
         }
@@ -244,18 +270,19 @@ export default function Trackpad() {
   };
 
   const handleDelete = async (indexToDelete) => {
-    const trackToDelete = playlist[indexToDelete];
+    const trackToDelete = displayedPlaylist[indexToDelete];
     try {
       const res = await fetch(`/api/playlist/${trackToDelete.videoId}`, {
         method: "DELETE",
       });
       if (res.ok) {
-        setPlaylist((prev) => prev.filter((_, i) => i !== indexToDelete));
+        setOriginalPlaylist((prev) => prev.filter((track) => track.videoId !== trackToDelete.videoId));
+        setDisplayedPlaylist((prev) => prev.filter((_, i) => i !== indexToDelete));
         if (indexToDelete === currentIndex) {
-          if (playlist.length === 1) {
+          if (displayedPlaylist.length === 1) {
             setCurrentIndex(null);
             setIsPlaying(false);
-          } else if (indexToDelete === playlist.length - 1) {
+          } else if (indexToDelete === displayedPlaylist.length - 1) {
             setCurrentIndex(0);
           } else {
             setCurrentIndex(indexToDelete);
@@ -274,7 +301,7 @@ export default function Trackpad() {
 
   const handleNext = () => {
     if (currentIndex !== null) {
-      if (currentIndex < playlist.length - 1) {
+      if (currentIndex < displayedPlaylist.length - 1) {
         setCurrentIndex(currentIndex + 1);
       } else {
         setCurrentIndex(0);
@@ -344,7 +371,16 @@ export default function Trackpad() {
     }
   };
 
-  const currentTrack = currentIndex !== null && playlist[currentIndex] ? playlist[currentIndex] : null;
+  const handleSongClick = (index) => {
+    setCurrentIndex(index);
+    setCurrentTime(0);
+    setIsPlaying(true);
+    // Clear search and collapse search bar
+    setSearchQuery('');
+    setSearchOpen(false);
+  };
+
+  const currentTrack = currentIndex !== null && displayedPlaylist[currentIndex] ? displayedPlaylist[currentIndex] : null;
   const videoId = currentTrack ? currentTrack.videoId : "";
   const imageSrc = videoId
     ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
@@ -363,7 +399,7 @@ export default function Trackpad() {
   };
 
   return (
-    <Box sx={{ width: '100%', height:'100%', overflow: 'hidden', position: 'relative', p: 3 }}>
+    <Box sx={{ width: '100%', overflow: 'hidden', position: 'relative', p: 3 }}>
       <Widget>
         <Stack direction="row" spacing={2} sx={{ mb: 2 }} alignItems="center">
           <TextField
@@ -416,7 +452,7 @@ export default function Trackpad() {
               {currentTrack ? currentTrack.title : "Select a track"}
             </Typography>
             <Typography noWrap sx={{ letterSpacing: -0.25, color: 'text.secondary' }}>
-              Playlist — {playlist.length} tracks
+              Playlist — {originalPlaylist.length} tracks
             </Typography>
           </Box>
           <IconButton
@@ -556,15 +592,54 @@ export default function Trackpad() {
           <VolumeUpRounded />
         </Stack>
 
+        {/* Search Bar with Expandable Icon */}
+        <SearchContainer>
+          <IconButton
+            onClick={() => setSearchOpen(!searchOpen)}
+            sx={{
+              color: 'rgba(0,0,0,0.54)',
+              '&:hover': {
+                color: 'rgba(0,0,0,0.87)',
+              },
+              '.dark &': {
+                color: 'rgba(255,255,255,0.54)',
+                '&:hover': {
+                  color: 'rgba(255,255,255,0.87)',
+                },
+              },
+            }}
+          >
+            <SearchRounded />
+          </IconButton>
+          <Collapse in={searchOpen} orientation="horizontal" sx={{ flex: 1 }}>
+            <TextField
+              fullWidth
+              placeholder="Search playlist..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              size="small"
+              sx={{
+                '& .MuiInputBase-root': {
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                },
+                '& .MuiInputBase-input': {
+                  padding: '8px 12px',
+                },
+              }}
+            />
+          </Collapse>
+        </SearchContainer>
+
         <PlaylistContainer>
-          {playlist.length === 0 ? (
+          {displayedPlaylist.length === 0 ? (
             <Typography sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
-              No tracks added yet
+              {searchQuery.trim() ? "No tracks found" : "No tracks added yet"}
             </Typography>
           ) : (
-            playlist.map((track, index) => (
+            displayedPlaylist.map((track, index) => (
               <PlaylistItem
-                key={index}
+                key={track.videoId} // Use videoId as key to ensure uniqueness
                 className={currentIndex === index ? 'active' : ''}
               >
                 <Box
@@ -582,11 +657,7 @@ export default function Trackpad() {
                       flex: '1 1 auto',
                       minWidth: 0,
                     }}
-                    onClick={() => {
-                      setCurrentIndex(index);
-                      setCurrentTime(0);
-                      setIsPlaying(true);
-                    }}
+                    onClick={() => handleSongClick(index)}
                   >
                     <Box
                       sx={{
@@ -609,7 +680,7 @@ export default function Trackpad() {
                       sx={{
                         flex: '1 1 auto',
                         minWidth: 0,
-                        maxWidth: 'calc(100% - 88px)', // Reserve space for image and delete button
+                        maxWidth: 'calc(100% - 88px)',
                       }}
                     >
                       <Typography

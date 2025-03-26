@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import theme from '../src/theme'; // Create this file if you don't have it
+import theme from '../src/theme';
 
 export default function MyApp({ Component, pageProps }) {
   useEffect(() => {
