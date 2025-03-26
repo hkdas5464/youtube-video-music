@@ -133,13 +133,25 @@ export default function Trackpad() {
   const [liked, setLiked] = React.useState(false);
   const [volume, setVolume] = React.useState(50);
 
+  // Function to shuffle array (Fisher-Yates algorithm)
+  const shuffleArray = (array) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   React.useEffect(() => {
     async function fetchPlaylist() {
       const res = await fetch("/api/playlist");
       const json = await res.json();
       if (json.success) {
-        setPlaylist(json.data);
-        if (json.data.length > 0 && currentIndex === null) {
+        // Shuffle the playlist on initial load
+        const shuffledPlaylist = shuffleArray(json.data);
+        setPlaylist(shuffledPlaylist);
+        if (shuffledPlaylist.length > 0 && currentIndex === null) {
           setCurrentIndex(0);
         }
       }
@@ -351,7 +363,7 @@ export default function Trackpad() {
   };
 
   return (
-    <Box sx={{ width: '100%', overflow: 'hidden', position: 'relative', p: 3 }}>
+    <Box sx={{ width: '100%', height:'100%', overflow: 'hidden', position: 'relative', p: 3 }}>
       <Widget>
         <Stack direction="row" spacing={2} sx={{ mb: 2 }} alignItems="center">
           <TextField
@@ -565,9 +577,10 @@ export default function Trackpad() {
                 >
                   <Box
                     sx={{
+                      display: 'flex',
+                      alignItems: 'center',
                       flex: '1 1 auto',
                       minWidth: 0,
-                      maxWidth: 'calc(100% - 48px)',
                     }}
                     onClick={() => {
                       setCurrentIndex(index);
@@ -575,19 +588,44 @@ export default function Trackpad() {
                       setIsPlaying(true);
                     }}
                   >
-                    <Typography
-                      noWrap
+                    <Box
                       sx={{
-                        fontSize: '0.95rem',
-                        fontWeight: 500,
-                        color: currentIndex === index ? 'text.primary' : 'text.secondary',
+                        width: 40,
+                        height: 40,
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        borderRadius: 4,
+                        backgroundColor: 'rgba(0,0,0,0.08)',
+                        mr: 2,
                       }}
                     >
-                      {track.title}
-                    </Typography>
+                      <img
+                        src={`https://img.youtube.com/vi/${track.videoId}/hqdefault.jpg`}
+                        alt={track.title}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </Box>
+                    <Box
+                      sx={{
+                        flex: '1 1 auto',
+                        minWidth: 0,
+                        maxWidth: 'calc(100% - 88px)', // Reserve space for image and delete button
+                      }}
+                    >
+                      <Typography
+                        noWrap
+                        sx={{
+                          fontSize: '0.95rem',
+                          fontWeight: 500,
+                          color: currentIndex === index ? 'text.primary' : 'text.secondary',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {track.title}
+                      </Typography>
+                    </Box>
                   </Box>
                   <Box sx={{ flex: '0 0 48px', display: 'flex', justifyContent: 'flex-end' }}>
                     <IconButton
